@@ -9,8 +9,8 @@ pipeline {
 
     parameters {
         // string(name: 'VERSION', defaultValue: '', description: 'Version of the application')
-        choice(name: 'VERSION', choices: ['1.1.0', '1.1.1', '2.1.0'], description: 'Environment to deploy the application')
-        booleanParam(name: 'executeTests', defaultValue: true, description: 'Run tests?')
+        choice(name: 'VERSION', choices: ['1.1.0', '2.1.0', '2.2.0'], description: 'Please select the version of the application')
+        booleanParam(name: 'ExecuteTests', defaultValue: true, description: 'Please select the flag')
     }
 
     stages {
@@ -26,7 +26,7 @@ pipeline {
         stage('Test the application') {
             when {
                 expression {
-                    params.executeTests
+                    params.ExecuteTests
                 }
             }
             steps {
@@ -35,13 +35,25 @@ pipeline {
                 }
             }
         }
-       
-        stage('Build jar') {
+
+        stage('Increment version') {
             steps {
                 script {
-                    // gv.buildJar()
-                    echo "building the application"
-                    // sh 'mvn package'
+                    echo "Incrementing the version of the application"
+                    sh 'mvn build-helper:parse-version versions:set \
+                        -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} \
+                        versions:commit'
+                    def matcher = readFile('pom.xml') =~ '<version>(.*)</version>'
+                    def version = matcher[0][1]
+                    env.IMAGE_NAME = "$version-$BUILD_NUMBER"
+                }
+            }
+        }
+       
+        stage('Build the Application') {
+            steps {
+                script {
+                    gv.buildJar()
                 }
             }
         }
@@ -49,7 +61,7 @@ pipeline {
         stage('Build docker image') {
             steps {
                 script {
-                    echo "building the docker image ${params.VERSION}"
+                    gv.buildImage()
                 }
             }
         }
