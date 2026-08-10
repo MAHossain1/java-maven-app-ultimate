@@ -1,6 +1,8 @@
 .idea/*
 target
 
+.terraform
+
 .terraform/*
 
 #tf state files
