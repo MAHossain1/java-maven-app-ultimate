@@ -101,6 +101,6 @@ resource "aws_instance" "myapp-server" {
   }
 }
 
-output "myapp-server-public-ip" {
+output "ec2_public_ip" {
   value = aws_instance.myapp-server.public_ip
 }
