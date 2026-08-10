@@ -72,7 +72,7 @@ pipeline {
                     echo "Deploying docker image on EC2 instance using docker-compose"
 
                     def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME}"
-                    def ec2Instance = "ubuntu@13.233.157.87"
+                    def ec2Instance = "ubuntu@13.127.105.6"
 
                     sshagent(['ec2-server-key']) {
                         sh "scp -o StrictHostKeyChecking=no server-cmds.sh ${ec2Instance}:/home/ubuntu/server-cmds.sh"
@@ -81,6 +81,35 @@ pipeline {
                     }
                 }
 
+            }
+        }
+
+        stage('Commit version update') {
+            steps {
+                script {
+                    sshagent(['github-ssh-key']) {
+
+                        sh '''
+                            git config user.email "jenkins@example.com"
+                            git config user.name "Jenkins"
+
+                            git remote set-url origin git@github.com:MAHossain1/java-maven-app-ultimate.git
+
+                            mkdir -p ~/.ssh
+                            ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+                            git status
+
+                            if ! git diff --quiet pom.xml; then
+                                git add pom.xml
+                                git commit -m "Increment application version"
+                                git push origin HEAD:main
+                            else
+                                echo "No version changes to commit"
+                            fi
+                        '''
+                    }
+                }
             }
         }
 
