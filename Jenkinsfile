@@ -66,6 +66,24 @@ pipeline {
             }
         }
 
+        stage('Deploy the application') {
+            steps {
+                script {
+                    echo "Deploying docker image on EC2 instance using docker-compose"
+
+                    def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME}"
+                    def ec2Instance = "ubuntu@13.233.157.87"
+
+                    sshagent(['ec2-server-key']) {
+                        sh "scp -o StrictHostKeyChecking=no server-cmds.sh ${ec2Instance}:/home/ubuntu/server-cmds.sh"
+                        sh "scp -o StrictHostKeyChecking=no docker-compose.yaml ${ec2Instance}:/home/ubuntu/docker-compose.yaml"
+                        sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} '${shellCmd}'"
+                    }
+                }
+
+            }
+        }
+
     }
 
 }
