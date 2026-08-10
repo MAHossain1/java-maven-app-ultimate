@@ -1,17 +1,15 @@
 .idea/*
 target
 
-.terraform
-
-.terraform/*
-
-#tf state files
+# Terraform
+.terraform/
 *.tfstate
 *.tfstate.*
-
-
-# tf variables files, may contain sensitive data
-*.tfvars
-
-
-.vscode
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
