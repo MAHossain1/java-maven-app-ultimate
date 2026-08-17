@@ -1,0 +1,113 @@
+---
+############   I used sleep to wait on terraform instead of using this task #############
+- name: Wait for SSH to come up
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Wait for SSH to be available
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 300
+        search_regex: OpenSSH
+        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
+      vars:
+        ansible_connection: local
+
+- name: Install docker, docker-compose and start
+  hosts: all
+  become: true
+
+  vars:
+    docker_compose_version: "2.24.6"
+
+  tasks:
+    - name: Update apt cache
+      apt: 
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
+
+    - name: Install Docker dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        update_cache: yes
+        state: present 
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
+      args:
+        creates: /usr/share/keyrings/docker.gpg
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+
+    - name: Install Docker Engine
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        update_cache: yes
+        state: present
+
+    - name: Enable & start Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add current user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Download Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-x86_64"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Verify Docker Compose installation
+      command: docker-compose --version
+      register: compose_version
+
+    - debug:
+        msg: "Docker Compose version: {{ compose_version.stdout }}"     
+
+- name: Start docker containers
+  hosts: all
+  become: true
+  vars_files:
+    - project-vars
+  tasks:
+    - name: Copy docker-compose.yaml to remote server
+      copy:
+        src: /home/arman/learn-devops/complete-project/java-maven-app-ultimate/ansible/docker-compose-jma.yaml
+        dest: /home/ubuntu/docker-compose-jma.yaml
+        mode: '0644'
+
+    - name: Docker login
+      community.docker.docker_login: 
+        registry_url: https://index.docker.io/v1/
+        username: arman04
+        password: "{{docker_password}}"
+    
+
+    - name: Start container from compose
+      community.docker.docker_compose_v2:
+        project_src: /home/ubuntu
+        files: 
+          - docker-compose-jma.yaml
+        state: present
+        pull: always
+        recreate: always

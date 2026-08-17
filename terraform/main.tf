@@ -103,6 +103,10 @@ resource "aws_instance" "myapp-server" {
 
   user_data_replace_on_change = true
 
+  provisioner "local-exec" {
+    working_dir = "/home/arman/learn-devops/complete-project/java-maven-app-ultimate/ansible/"
+    command     = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.key_name} --user ubuntu deploy-docker-on-ubuntu.yaml"
+  }
   tags = {
     Name = "${var.env_prefix}-myapp-server"
   }

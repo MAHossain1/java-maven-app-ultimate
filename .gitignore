@@ -4,6 +4,7 @@ target
 # Terraform
 .terraform/
 *.tfstate
+*.tfvars
 *.tfstate.*
 .terraform.lock.hcl
 crash.log
@@ -13,3 +14,12 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/terraform.tfvars
+
+# Ansible
+ansible/project-vars

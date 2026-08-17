@@ -89,7 +89,8 @@ pipeline {
 
         stage('Deploy the application') {
             environment {
-                DOCKER_CREDS = credentials('docker-hub-repo')
+                DOCKER_CREDS = credentials('docker-hub-repo') 
+                #for private docker images, you can use the above credentials to login to docker hub and pull the image
             }
             steps {
                 script {
