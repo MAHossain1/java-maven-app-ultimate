@@ -99,10 +99,6 @@ resource "aws_instance" "myapp-server" {
   associate_public_ip_address = true
   key_name                    = "dockerJenkinsPipelineKey"
 
-  user_data = file("entry-script.sh")
-
-  user_data_replace_on_change = true
-
   provisioner "local-exec" {
     working_dir = "/home/arman/learn-devops/complete-project/java-maven-app-ultimate/ansible/"
     command     = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.key_name} --user ubuntu deploy-docker-on-ubuntu.yaml"

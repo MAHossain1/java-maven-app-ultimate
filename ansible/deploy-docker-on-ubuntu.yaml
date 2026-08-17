@@ -23,47 +23,58 @@
 
   tasks:
     - name: Update apt cache
-      apt: 
-        update_cache: yes
-        force_apt_get: yes
+      ansible.builtin.apt:
+        update_cache: true
+        force_apt_get: true
         cache_valid_time: 3600
 
     - name: Install Docker dependencies
-      apt:
+      ansible.builtin.apt:
         name:
-          - apt-transport-https
           - ca-certificates
           - curl
-          - software-properties-common
-        update_cache: yes
-        state: present 
-
-    - name: Add Docker GPG key
-      ansible.builtin.shell: |
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
-      args:
-        creates: /usr/share/keyrings/docker.gpg
-
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        update_cache: true
         state: present
 
+    - name: Create APT keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Add Docker repository
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: https://download.docker.com/linux/ubuntu
+        suites: "{{ ansible_facts['distribution_release'] }}"
+        components:
+          - stable
+        architectures:
+          - amd64
+        signed_by: /etc/apt/keyrings/docker.asc
+        state: present
 
     - name: Install Docker Engine
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
           - containerd.io
-        update_cache: yes
+        update_cache: true
         state: present
 
     - name: Enable & start Docker
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
-        enabled: yes
+        enabled: true 
 
     - name: Add current user to docker group
       user:
