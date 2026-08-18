@@ -153,18 +153,30 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
-
-                    echo "Checking application..."
+                    echo "Waiting for application to become ready..."
+                    echo "Checking http://${EC2_PUBLIC_IP}:8080"
 
                     sh """
-                        curl \
-                            --fail \
-                            --retry 10 \
-                            --retry-delay 5 \
-                            http://${EC2_PUBLIC_IP}:8080
-                    """
+                        # Wait a bit extra after Ansible finishes
+                        sleep 20
 
-                    echo "Application is running successfully."
+                        for i in \$(seq 1 20); do
+                            echo "Attempt \$i/20..."
+                            
+                            if curl --fail --silent --max-time 8 http://${EC2_PUBLIC_IP}:8080 > /dev/null; then
+                                echo "========================================"
+                                echo " Application is running successfully!"
+                                echo "========================================"
+                                exit 0
+                            fi
+                            
+                            echo "Not ready yet... waiting 10 seconds"
+                            sleep 10
+                        done
+
+                        echo "Application did not become ready after multiple attempts"
+                        exit 1
+                    """
                 }
             }
         }
@@ -193,6 +205,51 @@ pipeline {
                                 echo "No version changes to commit"
                             fi
                         '''
+                    }
+                }
+            }
+        }
+
+        stage('Destroy Infrastructure') {
+            when {
+                expression { 
+                    currentBuild.result == null || currentBuild.result == 'SUCCESS' 
+                }
+            }
+            environment {
+                AWS_ACCESS_KEY_ID     = credentials('jenkins_aws_access_key_id')
+                AWS_SECRET_ACCESS_KEY = credentials('jenkins_aws_secret_access_key')
+                TF_VAR_env_prefix     = 'test'
+                TF_VAR_key_name       = 'dockerJenkinsPipelineKey'
+            }
+            steps {
+                script {
+                    // Manual approval
+                    def userInput = input(
+                        id: 'DestroyConfirm',
+                        message: 'Do you want to destroy the EC2 instance and all related resources?',
+                        parameters: [
+                            booleanParam(
+                                defaultValue: false,
+                                description: 'Check this box to confirm destruction',
+                                name: 'CONFIRM_DESTROY'
+                            )
+                        ]
+                    )
+
+                    if (userInput == true) {
+                        echo "User confirmed. Destroying infrastructure..."
+
+                        dir('terraform') {
+                            sh '''
+                                terraform init -input=false
+                                terraform destroy -auto-approve
+                            '''
+                        }
+
+                        echo "Infrastructure destroyed successfully."
+                    } else {
+                        echo "Destruction cancelled by user. Infrastructure will remain."
                     }
                 }
             }
