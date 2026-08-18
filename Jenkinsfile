@@ -143,7 +143,7 @@ pipeline {
                             ansible-playbook \
                                 -i inventory.ini \
                                 deploy-docker-on-ubuntu.yaml \
-                                --extra-vars "image_tag=${IMAGE_NAME}"
+                                --extra-vars "image_tag=${IMAGE_NAME} docker_password=${DOCKER_CREDS_PSW}"
                         """
                     }
                 }
