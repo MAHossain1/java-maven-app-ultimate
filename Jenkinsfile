@@ -127,16 +127,16 @@ pipeline {
 
                     // Create dynamic inventory
                     writeFile file: 'ansible/inventory.ini', text: """
-        [webserver]
-        ${EC2_PUBLIC_IP}
+                    [webserver]
+                    ${EC2_PUBLIC_IP}
 
-        [webserver:vars]
-        ansible_user=ubuntu
-        ansible_ssh_private_key_file=/root/.ssh/ansible-pem.pem
-        ansible_become=true
-        ansible_become_method=sudo
-        ansible_ssh_common_args='-o StrictHostKeyChecking=no'
-        """
+                    [webserver:vars]
+                    ansible_user=ubuntu
+                    ansible_ssh_private_key_file=/root/.ssh/ansible-pem.pem
+                    ansible_become=true
+                    ansible_become_method=sudo
+                    ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+                    """
 
                     dir('ansible') {
                         sh """
