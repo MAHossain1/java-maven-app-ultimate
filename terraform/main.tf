@@ -99,10 +99,11 @@ resource "aws_instance" "myapp-server" {
   associate_public_ip_address = true
   key_name                    = "dockerJenkinsPipelineKey"
 
-  provisioner "local-exec" {
-    working_dir = "/home/arman/learn-devops/complete-project/java-maven-app-ultimate/ansible/"
-    command     = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.key_name} --user ubuntu deploy-docker-on-ubuntu.yaml"
-  }
+  # we use aws_ec2 plugin in ansible.cfg to dynamically fetch the public IP of the EC2 instance, so we don't need to use local-exec provisioner here.
+  # provisioner "local-exec" {
+  #   working_dir = "/home/arman/learn-devops/complete-project/java-maven-app-ultimate/ansible/"
+  #   command     = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.key_name} --user ubuntu deploy-docker-on-ubuntu.yaml"
+  # }
   tags = {
     Name = "${var.env_prefix}-myapp-server"
   }

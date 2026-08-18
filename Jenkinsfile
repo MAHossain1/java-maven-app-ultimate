@@ -87,29 +87,67 @@ pipeline {
             }
         }
 
-        stage('Deploy the application') {
+        // stage('Deploy the application') {
+        //     environment {
+        //         DOCKER_CREDS = credentials('docker-hub-repo') 
+        //         #for private docker images, you can use the above credentials to login to docker hub and pull the image
+        //     }
+        //     steps {
+        //         script {
+        //             echo "waiting for EC2 server to initialize"
+        //             sleep(time: 90, unit: "SECONDS")
+
+        //             echo "Deploying docker image on EC2 instance using docker-compose"
+        //             echo "${EC2_PUBLIC_IP}"
+
+        //             def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME}"
+        //             def ec2Instance = "ubuntu@${EC2_PUBLIC_IP}"
+
+        //             sshagent(['ec2-server-key']) {
+        //                 sh "scp -o StrictHostKeyChecking=no server-cmds.sh ${ec2Instance}:/home/ubuntu/server-cmds.sh"
+        //                 sh "scp -o StrictHostKeyChecking=no docker-compose.yaml ${ec2Instance}:/home/ubuntu/docker-compose.yaml"
+        //                 sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} '${shellCmd}'"
+        //             }
+        //         }
+
+        //     }
+        // }
+
+        stage('Deploy with Ansible') {
             environment {
-                DOCKER_CREDS = credentials('docker-hub-repo') 
-                #for private docker images, you can use the above credentials to login to docker hub and pull the image
+                DOCKER_CREDS = credentials('docker-hub-repo')
             }
+
+            echo "Deploying application using Ansible..."
+            echo "EC2: ${EC2_PUBLIC_IP}"
+
+            steps {
+                dir('ansible') {
+                    sh """
+                        ansible-playbook \
+                            deploy-docker-on-ubuntu.yaml \
+                            --extra-vars 'image_tag=${IMAGE_NAME}'
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
             steps {
                 script {
-                    echo "waiting for EC2 server to initialize"
-                    sleep(time: 90, unit: "SECONDS")
 
-                    echo "Deploying docker image on EC2 instance using docker-compose"
-                    echo "${EC2_PUBLIC_IP}"
+                    echo "Checking application..."
 
-                    def shellCmd = "bash ./server-cmds.sh ${IMAGE_NAME}"
-                    def ec2Instance = "ubuntu@${EC2_PUBLIC_IP}"
+                    sh """
+                        curl \
+                            --fail \
+                            --retry 10 \
+                            --retry-delay 5 \
+                            http://${EC2_PUBLIC_IP}:8080
+                    """
 
-                    sshagent(['ec2-server-key']) {
-                        sh "scp -o StrictHostKeyChecking=no server-cmds.sh ${ec2Instance}:/home/ubuntu/server-cmds.sh"
-                        sh "scp -o StrictHostKeyChecking=no docker-compose.yaml ${ec2Instance}:/home/ubuntu/docker-compose.yaml"
-                        sh "ssh -o StrictHostKeyChecking=no ${ec2Instance} '${shellCmd}'"
-                    }
+                    echo "Application is running successfully."
                 }
-
             }
         }
 

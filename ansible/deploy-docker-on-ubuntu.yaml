@@ -122,3 +122,5 @@
         state: present
         pull: always
         recreate: always
+        environment:
+          IMAGE_TAG: "{{ image_tag }}"
