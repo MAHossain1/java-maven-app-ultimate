@@ -116,21 +116,35 @@ pipeline {
 
         stage('Deploy with Ansible') {
             environment {
-                AWS_ACCESS_KEY_ID = credentials('jenkins_aws_access_key_id')
+                AWS_ACCESS_KEY_ID     = credentials('jenkins_aws_access_key_id')
                 AWS_SECRET_ACCESS_KEY = credentials('jenkins_aws_secret_access_key')
-                DOCKER_CREDS = credentials('docker-hub-repo')
+                DOCKER_CREDS          = credentials('docker-hub-repo')
             }
-
             steps {
                 script {
                     echo "Deploying application using Ansible..."
-                    echo "EC2: ${EC2_PUBLIC_IP}"                
+                    echo "EC2 Public IP: ${EC2_PUBLIC_IP}"
+
+                    // Create dynamic inventory
+                    writeFile file: 'ansible/inventory.ini', text: """
+        [webserver]
+        ${EC2_PUBLIC_IP}
+
+        [webserver:vars]
+        ansible_user=ubuntu
+        ansible_ssh_private_key_file=/root/.ssh/dockerJenkinsPipelineKey.pem
+        ansible_become=true
+        ansible_become_method=sudo
+        ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+        """
+
                     dir('ansible') {
-                    sh """
-                        ansible-playbook \
-                            deploy-docker-on-ubuntu.yaml \
-                            --extra-vars 'image_tag=${IMAGE_NAME}'
-                    """
+                        sh """
+                            ansible-playbook \
+                                -i inventory.ini \
+                                deploy-docker-on-ubuntu.yaml \
+                                --extra-vars "image_tag=${IMAGE_NAME}"
+                        """
                     }
                 }
             }
