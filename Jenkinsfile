@@ -118,16 +118,17 @@ pipeline {
                 DOCKER_CREDS = credentials('docker-hub-repo')
             }
 
-            echo "Deploying application using Ansible..."
-            echo "EC2: ${EC2_PUBLIC_IP}"
-
             steps {
-                dir('ansible') {
+                script {
+                    echo "Deploying application using Ansible..."
+                    echo "EC2: ${EC2_PUBLIC_IP}"                
+                    dir('ansible') {
                     sh """
                         ansible-playbook \
                             deploy-docker-on-ubuntu.yaml \
                             --extra-vars 'image_tag=${IMAGE_NAME}'
                     """
+                    }
                 }
             }
         }
